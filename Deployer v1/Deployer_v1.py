@@ -1,16 +1,13 @@
 from dependencies import *
+from layouts import basic_header, styles
 
 @ui.page('/')
 def root():
-    with ui.header():
-        ui.button('Filesystem',on_click=lambda: ui.navigate.to('/fs'))
-        ui.button('Source Control',on_click=lambda: ui.navigate.to('/sc'))
-        ui.button('Services',on_click=lambda: ui.navigate.to('/sv'))
-        ui.button('IIS',on_click=lambda: ui.navigate.to('/sv'))
+    styles()
 
 @ui.page('/fs')
 def filesystem():
-    ui.label('hello')
-    ui.button('Home',on_click=lambda: ui.navigate.to('/'))
+    basic_header()
+
 
 ui.run(title='App Deployer', native=True, window_size=(500, 600), fullscreen=False)
