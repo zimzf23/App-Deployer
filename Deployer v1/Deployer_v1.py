@@ -1,5 +1,6 @@
 from dependencies import *
 from filesys import filesys_body
+from source import source_body
 from layouts import source_header, filesys_header, styles
 @ui.page('/')
 def root():
@@ -24,7 +25,7 @@ def filesystem():
 def filesystem():
     styles()
     source_header()
-    filesys_body()
+    source_body()   
 
 
 ui.run(title='App Deployer', native=True, window_size=(600, 800), fullscreen=False, dark=True, uvicorn_reload_excludes='env/*')

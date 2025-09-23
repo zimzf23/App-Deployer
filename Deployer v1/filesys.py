@@ -83,9 +83,16 @@ def session_card():
     @ui.refreshable
     def render():
         with ui.card().classes('w-full max-w-2xl mx-auto p-4 neon-card'):
-            ui.label('App path').classes('neon-text text-2xl font-bold mb-4')
+            ui.label('App path').classes('neon-text text-xl font-bold mb-4')
             with ui.column().classes('w-full gap-3'):
                 path_picker_input('Deploy folder', ROOT)
+                path_picker_input('Backup folder', ROOT)
+                path_picker_input('Archive folder', ROOT)
+            with ui.row():
+                ui.button('Archive')
+                ui.button('Back Up')
+                ui.button('Wipe')
+
     render()
     return render
 

@@ -1,8 +1,10 @@
 from dependencies import *
 
 class State:
-    def __init__(self):
-        self.current_path = Path('C:/').resolve()
-        self.app_path = ''
+        current_path = Path('C:/').resolve()
+        app_path = ''
+        repo_url = ''
+        repo_branches = [] 
+        active_branch = ''
 
 state = State()
