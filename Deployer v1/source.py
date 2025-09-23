@@ -44,6 +44,32 @@ def gitpath_card():
             ui.notify(f'Error reading branches: {e}', color='negative')
             branch_selector.refresh()
 
+    def run_cmd(*args):
+        r = subprocess.run(args, text=True, capture_output=True)
+        if r.returncode != 0:
+            raise RuntimeError(r.stderr.strip() or f'Command failed: {" ".join(args)}')
+        return r.stdout.strip()
+
+    def clone_repo():
+        if not State.repo_url:
+            ui.notify('No repo URL', color='negative'); return
+        if not State.active_branch:
+            ui.notify('No branch selected', color='negative'); return
+        if not State.root_path:
+            ui.notify('No target directory', color='negative'); return
+
+        target = Path(State.root_path)
+        if target.exists() and any(target.iterdir()):
+            ui.notify('Target folder not empty', color='warning')
+            return
+
+        try:
+            ui.notify(f'Cloning {State.repo_url}@{State.active_branch} …', color='primary')
+            run_cmd('git', 'clone', '--branch', State.active_branch, State.repo_url, str(target))
+            ui.notify(f'Cloned to {target}', color='positive')
+        except Exception as e:
+            ui.notify(f'Clone failed: {e}', color='negative')
+
     @ui.refreshable
     def branch_selector():
         """View-only selector; reads from State, does not fetch."""
@@ -55,7 +81,7 @@ def gitpath_card():
             with ui.column().classes('w-full gap-3'):
 
                 # App Directory (readonly) — bound to State
-                ui.input('App Directory').props('dense outlined readonly').classes('w-full').bind_value(State, 'app_path')
+                ui.input('App Directory').props('dense outlined readonly').classes('w-full').bind_value(State, 'root_path')
 
                 ui.separator()
                 repo_input = ui.input('Github Repo') .props('dense outlined').classes('w-full').bind_value(State, 'repo_url')
@@ -63,7 +89,7 @@ def gitpath_card():
                     ui.button(icon='search', on_click=fetch_branches).props('dense flat round').classes('q-ml-xs')
                 with ui.row().classes('gap-10 flex-nowrap w-full'):
                     branch_selector()
-                    ui.button('Clone')
+                    ui.button('Clone', on_click=clone_repo)
 
     render()
     return render

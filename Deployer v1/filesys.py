@@ -8,25 +8,22 @@ def filesys_body():
 
 @ui.refreshable
 def session_card():
-    ROOT = Path('C:/').resolve()
-
-    # ensure attributes exist on the class (safe no-ops if already defined)
-    for name in ['app_path', 'backup_path', 'archive_path']:
+    # ensure attributes exist on the class
+    for name in ['root_path', 'app_path', 'code_path', 'backup_path', 'archive_path']:
         if not hasattr(State, name):
             setattr(State, name, '')
 
-    def path_picker_input(label: str, target_attr: str, root: Path = ROOT) -> ui.input:
-        """Reusable folder picker input bound to State.<target_attr>"""
-        root = root.resolve()
+    def get_root() -> Path:
+        """Always compute the current root dynamically."""
+        return Path(State.root_path).resolve() if State.root_path else Path('C:/').resolve()
 
-        # bind input directly to State.<target_attr>
+    def path_picker_input(label: str, target_attr: str) -> ui.input:
+        """Reusable folder picker input bound to State.<target_attr>"""
         inp = ui.input(label).props('dense outlined').classes('w-full neon-input')
         inp.bind_value(State, target_attr)
 
-        # start from current value if set, else root
-        current_str = getattr(State, target_attr, '')
-        start_path = Path(current_str) if current_str else root
-        picker_state = {'cur': start_path}
+        # state for the dialog (we set it right before opening)
+        picker_state = {'cur': get_root()}
 
         dlg = ui.dialog()
         with dlg:
@@ -44,18 +41,22 @@ def session_card():
                 list_box = ui.column().classes('max-h-[50vh] overflow-y-auto w-full')
 
         def set_value(path: Path):
-            # write selection to State.<target_attr>; input updates via binding
-            setattr(State, target_attr, str(path))
+            setattr(State, target_attr, str(path))  # input updates via binding
+            # if we just set root_path, refresh so other pickers rebuild with new root
+            if target_attr == 'root_path':
+                render.refresh()
 
         def safe_set(path: Path):
             try:
                 p = path.resolve()
             except Exception:
                 return
-            if not str(p).startswith(str(root)):
+            # guard using the current root (dynamic)
+            root_now = get_root()
+            if not str(p).startswith(str(root_now)):
                 return
             picker_state['cur'] = p
-            render()
+            render_dialog()
 
         def list_dirs(path: Path):
             try:
@@ -64,10 +65,11 @@ def session_card():
             except PermissionError:
                 return []
 
-        def render():
+        def render_dialog():
             title.text = f'Current: {picker_state["cur"]}'
-            up_btn.on_click(lambda: safe_set(picker_state['cur'].parent if picker_state['cur'] != root else picker_state['cur']))
-            refresh_btn.on_click(render)
+            root_now = get_root()
+            up_btn.on_click(lambda: safe_set(picker_state['cur'].parent if picker_state['cur'] != root_now else picker_state['cur']))
+            refresh_btn.on_click(render_dialog)
 
             for c in list_box.default_slot.children[:]:
                 c.delete()
@@ -85,8 +87,16 @@ def session_card():
                                 ui.button(icon='done', on_click=lambda d=d: (safe_set(d), set_value(d), dlg.close())).props('flat dense')
 
         # button inside the input
+        def open_picker():
+            # decide start path each time based on latest root + current value
+            current_str = getattr(State, target_attr, '')
+            start = Path(current_str) if current_str else get_root()
+            picker_state['cur'] = start
+            render_dialog()
+            dlg.open()
+
         with inp.add_slot('append'):
-            ui.button('', icon='folder_open', on_click=lambda: (render(), dlg.open())) \
+            ui.button('', icon='folder_open', on_click=open_picker) \
                 .props('dense round flat').classes('q-ml-xs')
 
         return inp
@@ -96,9 +106,13 @@ def session_card():
         with ui.card().classes('w-full max-w-2xl mx-auto p-4 neon-card'):
             ui.label('Paths').classes('neon-text text-xl font-bold mb-4')
             with ui.column().classes('w-full gap-3'):
-                path_picker_input('Deploy folder',  'app_path',     ROOT)
-                path_picker_input('Backup folder',  'backup_path',  ROOT)
-                path_picker_input('Archive folder', 'archive_path', ROOT)
+                # 1) Pick root first
+                path_picker_input('Root folder', 'root_path')
+                # 2) These will open at the latest root_path (and refresh after root changes)
+                path_picker_input('App folder',     'app_path')
+                path_picker_input('Code folder',     'code_path')
+                path_picker_input('Backup folder',   'backup_path')
+                path_picker_input('Archive folder',  'archive_path')
             with ui.row().classes('gap-2 mt-4'):
                 ui.button('Archive')
                 ui.button('Back Up')
