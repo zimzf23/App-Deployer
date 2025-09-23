@@ -1,6 +1,6 @@
 from dependencies import *
 from filesys import filesys_body
-from layouts import filesys_header, styles
+from layouts import source_header, filesys_header, styles
 @ui.page('/')
 def root():
     styles()
@@ -20,6 +20,11 @@ def filesystem():
     filesys_header()
     filesys_body()
 
+@ui.page('/sc')
+def filesystem():
+    styles()
+    source_header()
+    filesys_body()
 
 
-ui.run(title='App Deployer', native=True,reload=False, window_size=(600, 800), fullscreen=False, dark=True, uvicorn_reload_excludes='env/*')
+ui.run(title='App Deployer', native=True, window_size=(600, 800), fullscreen=False, dark=True, uvicorn_reload_excludes='env/*')

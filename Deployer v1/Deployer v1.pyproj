@@ -26,6 +26,8 @@
     <Compile Include="Deployer_v1.py" />
     <Compile Include="filesys.py" />
     <Compile Include="layouts.py" />
+    <Compile Include="source.py" />
+    <Compile Include="state.py" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="env\">

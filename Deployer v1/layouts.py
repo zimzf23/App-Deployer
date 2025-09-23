@@ -20,4 +20,7 @@ def styles():
 def filesys_header():
     with ui.header(elevated=True).style('background-color: grey').classes('items-center justify-between'):
         ui.button(icon='home',on_click=lambda: ui.navigate.to('/'))
+def source_header():
+    with ui.header(elevated=True).style('background-color: grey').classes('items-center justify-between'):
+        ui.button(icon='home',on_click=lambda: ui.navigate.to('/'))
 
