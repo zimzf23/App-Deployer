@@ -24,6 +24,8 @@
   <ItemGroup>
     <Compile Include="dependencies.py" />
     <Compile Include="Deployer_v1.py" />
+    <Compile Include="filesys.py" />
+    <Compile Include="layouts.py" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="env\">
