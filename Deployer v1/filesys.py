@@ -10,14 +10,23 @@ def filesys_body():
 def session_card():
     ROOT = Path('C:/').resolve()
 
-    def path_picker_input(label: str = 'Path', root: Path = ROOT) -> ui.input:
+    # ensure attributes exist on the class (safe no-ops if already defined)
+    for name in ['app_path', 'backup_path', 'archive_path']:
+        if not hasattr(State, name):
+            setattr(State, name, '')
+
+    def path_picker_input(label: str, target_attr: str, root: Path = ROOT) -> ui.input:
+        """Reusable folder picker input bound to State.<target_attr>"""
         root = root.resolve()
 
-        # bind input to State.app_path
+        # bind input directly to State.<target_attr>
         inp = ui.input(label).props('dense outlined').classes('w-full neon-input')
-        inp.bind_value(State, 'app_path')
+        inp.bind_value(State, target_attr)
 
-        picker_State = {'cur': Path(State.app_path) if State.app_path else root}
+        # start from current value if set, else root
+        current_str = getattr(State, target_attr, '')
+        start_path = Path(current_str) if current_str else root
+        picker_state = {'cur': start_path}
 
         dlg = ui.dialog()
         with dlg:
@@ -27,7 +36,7 @@ def session_card():
                     up_btn = ui.button(icon='arrow_upward')
                     refresh_btn = ui.button(icon='refresh')
                     ui.button(icon='done',
-                              on_click=lambda: (set_value(picker_State['cur']), dlg.close())
+                              on_click=lambda: (set_value(picker_state['cur']), dlg.close())
                               ).props('color=primary')
                     ui.space()
                     ui.button(icon='close', on_click=dlg.close).props('flat')
@@ -35,7 +44,8 @@ def session_card():
                 list_box = ui.column().classes('max-h-[50vh] overflow-y-auto w-full')
 
         def set_value(path: Path):
-            State.app_path = str(path)   # updates both State + bound input
+            # write selection to State.<target_attr>; input updates via binding
+            setattr(State, target_attr, str(path))
 
         def safe_set(path: Path):
             try:
@@ -44,7 +54,7 @@ def session_card():
                 return
             if not str(p).startswith(str(root)):
                 return
-            picker_State['cur'] = p
+            picker_state['cur'] = p
             render()
 
         def list_dirs(path: Path):
@@ -55,14 +65,14 @@ def session_card():
                 return []
 
         def render():
-            title.text = f'Current: {picker_State["cur"]}'
-            up_btn.on_click(lambda: safe_set(picker_State['cur'].parent if picker_State['cur'] != root else picker_State['cur']))
+            title.text = f'Current: {picker_state["cur"]}'
+            up_btn.on_click(lambda: safe_set(picker_state['cur'].parent if picker_state['cur'] != root else picker_state['cur']))
             refresh_btn.on_click(render)
 
             for c in list_box.default_slot.children[:]:
                 c.delete()
 
-            dirs = list_dirs(picker_State['cur'])
+            dirs = list_dirs(picker_state['cur'])
             with list_box:
                 if not dirs:
                     ui.label('(no subfolders or permission denied)').classes('opacity-70')
@@ -74,6 +84,7 @@ def session_card():
                                 ui.button(icon='folder_open', on_click=lambda d=d: safe_set(d)).props('dense')
                                 ui.button(icon='done', on_click=lambda d=d: (safe_set(d), set_value(d), dlg.close())).props('flat dense')
 
+        # button inside the input
         with inp.add_slot('append'):
             ui.button('', icon='folder_open', on_click=lambda: (render(), dlg.open())) \
                 .props('dense round flat').classes('q-ml-xs')
@@ -83,12 +94,12 @@ def session_card():
     @ui.refreshable
     def render():
         with ui.card().classes('w-full max-w-2xl mx-auto p-4 neon-card'):
-            ui.label('App path').classes('neon-text text-xl font-bold mb-4')
+            ui.label('Paths').classes('neon-text text-xl font-bold mb-4')
             with ui.column().classes('w-full gap-3'):
-                path_picker_input('Deploy folder', ROOT)
-                path_picker_input('Backup folder', ROOT)
-                path_picker_input('Archive folder', ROOT)
-            with ui.row():
+                path_picker_input('Deploy folder',  'app_path',     ROOT)
+                path_picker_input('Backup folder',  'backup_path',  ROOT)
+                path_picker_input('Archive folder', 'archive_path', ROOT)
+            with ui.row().classes('gap-2 mt-4'):
                 ui.button('Archive')
                 ui.button('Back Up')
                 ui.button('Wipe')
