@@ -101,6 +101,45 @@ def session_card():
 
         return inp
 
+    def wipe_folder_contents(folder: str):
+        path = Path(folder)
+        if not path.exists() or not path.is_dir():
+            raise ValueError(f'Not a valid folder: {folder}')
+        if path == path.anchor:  # safeguard: don't wipe drive root (C:\, /)
+            raise ValueError('Refusing to wipe drive root')
+
+        # remove everything inside the folder
+        for child in path.iterdir():
+            if child.is_dir():
+                shutil.rmtree(child, ignore_errors=False)  # delete folder recursively
+            else:
+                child.unlink()  # delete file
+
+    def empty_folder(folder: str):
+        """Brutally empty folder contents via PowerShell, keeping the folder itself."""
+        folder = os.path.abspath(folder)
+        ps_cmd = f'Get-ChildItem -LiteralPath "{folder}" -Force | Remove-Item -Recurse -Force'
+        subprocess.run(["powershell", "-Command", ps_cmd], check=False)
+
+    def wipe_selected(sel_value: str):
+        mapping = {
+        'Root': 'root_path',
+        'App': 'app_path',
+        'Code': 'app_path',  # adjust if you split Code vs App later
+        }
+        attr = mapping.get(sel_value)
+        folder = getattr(State, attr, '')
+
+        if not folder:
+            ui.notify('No path set', color='warning')
+            return
+
+        try:
+            empty_folder(folder)
+            ui.notify(f'💣 Nuked contents of {folder}', color='positive')
+        except Exception as e:
+            ui.notify(f'Wipe failed: {e}', color='negative')
+
     @ui.refreshable
     def render():
         with ui.card().classes('w-full max-w-2xl mx-auto p-4 neon-card'):
@@ -111,12 +150,15 @@ def session_card():
                 # 2) These will open at the latest root_path (and refresh after root changes)
                 path_picker_input('App folder',     'app_path')
                 path_picker_input('Code folder',     'code_path')
+                ui.separator()
                 path_picker_input('Backup folder',   'backup_path')
                 path_picker_input('Archive folder',  'archive_path')
-            with ui.row().classes('gap-2 mt-4'):
+                ui.separator()
+            with ui.row().classes('gap-4 flex-nowrap w-full'):
+                selector = ui.select(options=['Root','App','Code']).props('dense outlined').classes('flex-1')
                 ui.button('Archive')
                 ui.button('Back Up')
-                ui.button('Wipe')
+                ui.button('Wipe', on_click=lambda: wipe_selected(selector.value))
 
     render()
     return render
