@@ -47,7 +47,7 @@ def gitpath_card():
     @ui.refreshable
     def branch_selector():
         """View-only selector; reads from State, does not fetch."""
-        ui.select(options=State.repo_branches, with_input=False ).props('dense outlined').classes('w-full').bind_value(State, 'active_branch')
+        ui.select(options=State.repo_branches, with_input=False ).props('dense outlined').bind_value(State, 'active_branch').classes('flex-1')
 
     @ui.refreshable
     def render():
@@ -61,7 +61,7 @@ def gitpath_card():
                 repo_input = ui.input('Github Repo') .props('dense outlined').classes('w-full').bind_value(State, 'repo_url')
                 with repo_input.add_slot('append'):
                     ui.button(icon='search', on_click=fetch_branches).props('dense flat round').classes('q-ml-xs')
-                with ui.row():
+                with ui.row().classes('gap-10 flex-nowrap w-full'):
                     branch_selector()
                     ui.button('Clone')
 
