@@ -61,7 +61,9 @@ def gitpath_card():
                 repo_input = ui.input('Github Repo') .props('dense outlined').classes('w-full').bind_value(State, 'repo_url')
                 with repo_input.add_slot('append'):
                     ui.button(icon='search', on_click=fetch_branches).props('dense flat round').classes('q-ml-xs')
-                branch_selector()
+                with ui.row():
+                    branch_selector()
+                    ui.button('Clone')
 
     render()
     return render
