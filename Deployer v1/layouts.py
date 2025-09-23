@@ -1,9 +1,7 @@
-
 from dependencies import *
 
 def styles():
-    ui.colors(blight='#71a8da')
-    ui.add_head_html('<style>body {background-color: GhostWhite; }</style>')
+    ui.colors(primary='green', secondary='orange',dark_page='#000000', )
     ui.add_css('''
     @font-face{
         font-family: "Magistral";
@@ -19,11 +17,7 @@ def styles():
     }
     ''')
 
-def basic_header():
-    with ui.header(elevated=True).style('background-color: white').classes('items-center justify-between'):
-        ui.button('Home',on_click=lambda: ui.navigate.to('/'))
-        ui.button('Filesystem',on_click=lambda: ui.navigate.to('/fs'))
-        ui.button('Source Control',on_click=lambda: ui.navigate.to('/sc'))
-        ui.button('Services',on_click=lambda: ui.navigate.to('/sv'))
-        ui.button('IIS',on_click=lambda: ui.navigate.to('/sv'))
+def filesys_header():
+    with ui.header(elevated=True).style('background-color: grey').classes('items-center justify-between'):
+        ui.button(icon='home',on_click=lambda: ui.navigate.to('/'))
 
