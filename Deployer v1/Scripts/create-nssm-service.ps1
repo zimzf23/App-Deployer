@@ -2,6 +2,7 @@ param(
   [Parameter(Mandatory)] [string] $ServiceName,
   [Parameter(Mandatory)] [string] $ExePath,
   [string[]] $Arguments = @(),
+  [string] $JsonArguments,                         # <--- NEW (preferred)
   [string] $WorkingDir,
   [string] $DisplayName,
   [string] $Description = "Managed by NSSM",
@@ -13,9 +14,39 @@ param(
   [string] $ObjectPassword = ""
 )
 
-$ErrorActionPreference = "Stop"
-$VerbosePreference = "Continue"
+# --------- DEBUG / SAFETY GLUE (keeps window open) ----------
+$ErrorActionPreference = 'Stop'
+$VerbosePreference = 'Continue'
+$log = Join-Path ([IO.Path]::GetTempPath()) ("nssm_create_" + ($ServiceName -replace '[^A-Za-z0-9_-]','_') + ".log")
+try { Stop-Transcript | Out-Null } catch {}
+Start-Transcript -Path $log -Append -Force | Out-Null
+
+trap {
+  Write-Host "`n[ERROR]" -ForegroundColor Red
+  Write-Host ($_.Exception.Message)
+  if ($_.InvocationInfo) { Write-Host ($_.InvocationInfo.PositionMessage) }
+  if ($_.ScriptStackTrace) { Write-Host ($_.ScriptStackTrace) }
+  Write-Host "`nLog file: $log"
+  Read-Host "`nPress ENTER to close"
+  Stop-Transcript | Out-Null
+  exit 1
+}
+# ------------------------------------------------------------
+
 Write-Host "[+] Create/Update NSSM service '$ServiceName'"
+
+# Admin?
+$IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $IsAdmin) { throw "Run this script as Administrator." }
+
+# Prefer JSON for args (robust)
+if ($JsonArguments) {
+  try {
+    $Arguments = @((ConvertFrom-Json -InputObject $JsonArguments))
+  } catch {
+    throw "JsonArguments is not valid JSON array. Example: ['C:\\apps\\myapp\\main.py','--port','8080']"
+  }
+}
 
 # find nssm.exe
 $nssm = "C:\nssm\nssm.exe"
@@ -23,58 +54,74 @@ if (-not (Test-Path $nssm)) {
   $cmd = Get-Command nssm.exe -ErrorAction SilentlyContinue
   if ($cmd) { $nssm = $cmd.Source } else { throw "nssm.exe not found (install to C:\nssm or add to PATH)" }
 }
-Write-Host "[DEBUG] NSSM = $nssm"
+Write-Host "[DEBUG] NSSM   = $nssm"
 
+# resolve paths
+if (-not (Test-Path $ExePath)) { throw "ExePath not found: $ExePath" }
 $ExePath = (Resolve-Path $ExePath).Path
 if (-not $WorkingDir) { $WorkingDir = Split-Path $ExePath -Parent }
+if (-not (Test-Path $WorkingDir)) { New-Item -ItemType Directory -Force -Path $WorkingDir | Out-Null }
 $WorkingDir = (Resolve-Path $WorkingDir).Path
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
 
-function Quote-Arg([string]$s){ if ($s -match '[\s"]') { '"' + ($s -replace '"','\"') + '"' } else { $s } }
-$argsString = ($Arguments | ForEach-Object { Quote-Arg $_ }) -join ' '
+Write-Host "[DEBUG] EXE    = $ExePath"
+Write-Host "[DEBUG] CWD    = $WorkingDir"
+Write-Host "[DEBUG] LOGDIR = $LogDir"
+if ($Arguments.Count) { Write-Host "[DEBUG] ARGS   = $($Arguments -join ' ')" }
 
-$svc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
-if (-not $svc) {
-  Write-Host "[+] Installing service..."
-  if ($argsString) { & $nssm install $ServiceName $ExePath $argsString | Out-Null }
-  else             { & $nssm install $ServiceName $ExePath            | Out-Null }
-} else {
-  Write-Host "[i] Service exists; updating settings..."
-  try { & $nssm stop $ServiceName | Out-Null } catch {}
+function Invoke-Nssm { param([string[]]$A)
+  & $nssm @A
+  if ($LASTEXITCODE -ne 0) { throw "nssm failed ($LASTEXITCODE): $($A -join ' ')" }
 }
 
-& $nssm set $ServiceName AppDirectory $WorkingDir          | Out-Null
-if ($argsString) { & $nssm set $ServiceName AppParameters $argsString | Out-Null }
-& $nssm set $ServiceName AppStdout   (Join-Path $LogDir "$ServiceName-stdout.log") | Out-Null
-& $nssm set $ServiceName AppStderr   (Join-Path $LogDir "$ServiceName-stderr.log") | Out-Null
-& $nssm set $ServiceName AppRotate   1                 | Out-Null
-& $nssm set $ServiceName AppRotateBytes 10485760       | Out-Null
-& $nssm set $ServiceName AppRotateDelay 10             | Out-Null
-& $nssm set $ServiceName AppExit Default Restart       | Out-Null
-& $nssm set $ServiceName AppRestartDelay $RestartDelayMs | Out-Null
+function Quote-Arg([string]$s){
+  if ($s -match '[\s"]') { '"' + ($s -replace '"','\"') + '"' } else { $s }
+}
+$argsString = if ($Arguments.Count) { ($Arguments | ForEach-Object { Quote-Arg $_ }) -join ' ' } else { "" }
 
-if ($AutoStart) { & $nssm set $ServiceName Start SERVICE_AUTO_START | Out-Null }
-else            { & $nssm set $ServiceName Start SERVICE_DEMAND_START | Out-Null }
-
-if ($DisplayName) { & $nssm set $ServiceName DisplayName $DisplayName | Out-Null }
-if ($Description){ & $nssm set $ServiceName Description $Description  | Out-Null }
-
-if ($ObjectName -and $ObjectName -ne "LocalSystem") {
-  if (-not $ObjectPassword) { throw "ObjectPassword is required when ObjectName is not LocalSystem." }
-  & $nssm set $ServiceName ObjectName $ObjectName     | Out-Null
-  & $nssm set $ServiceName Password   $ObjectPassword | Out-Null
+# create or update
+$svc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+if (-not $svc) {
+  Write-Host "[+] Installing service…"
+  Invoke-Nssm (@('install', $ServiceName, $ExePath) + $Arguments)   # <-- each arg as its own element
 } else {
-  & $nssm set $ServiceName ObjectName LocalSystem     | Out-Null
+  Write-Host "[i] Service exists; updating settings…"
+  try { Invoke-Nssm @('stop', $ServiceName) } catch {}
+}
+
+# settings
+Invoke-Nssm @('set', $ServiceName, 'AppDirectory', $WorkingDir)
+if ($argsString) { Invoke-Nssm @('set', $ServiceName, 'AppParameters', $argsString) }
+Invoke-Nssm @('set', $ServiceName, 'AppStdout', (Join-Path $LogDir "$ServiceName-stdout.log"))
+Invoke-Nssm @('set', $ServiceName, 'AppStderr', (Join-Path $LogDir "$ServiceName-stderr.log"))
+Invoke-Nssm @('set', $ServiceName, 'AppRotate', '1')
+Invoke-Nssm @('set', $ServiceName, 'AppRotateBytes', '10485760')
+Invoke-Nssm @('set', $ServiceName, 'AppRotateDelay', '10')
+Invoke-Nssm @('set', $ServiceName, 'AppExit', 'Default', 'Restart')
+Invoke-Nssm @('set', $ServiceName, 'AppRestartDelay', "$RestartDelayMs")
+
+Invoke-Nssm @('set', $ServiceName, 'Start', ($AutoStart ? 'SERVICE_AUTO_START' : 'SERVICE_DEMAND_START'))
+
+if ($DisplayName) { Invoke-Nssm @('set', $ServiceName, 'DisplayName', $DisplayName) }
+if ($Description) { Invoke-Nssm @('set', $ServiceName, 'Description', $Description) }
+
+if ($ObjectName -and $ObjectName -ne 'LocalSystem') {
+  if (-not $ObjectPassword) { throw "ObjectPassword is required when ObjectName is not LocalSystem." }
+  Invoke-Nssm @('set', $ServiceName, 'ObjectName', $ObjectName)
+  Invoke-Nssm @('set', $ServiceName, 'Password',   $ObjectPassword)
+} else {
+  Invoke-Nssm @('set', $ServiceName, 'ObjectName', 'LocalSystem')
 }
 
 if ($StartNow) {
-  Write-Host "[+] Starting service..."
-  & $nssm start $ServiceName | Out-Null
+  Write-Host "[+] Starting service…"
+  Invoke-Nssm @('start', $ServiceName)
   Start-Sleep -Seconds 1
-  Get-Service -Name $ServiceName | Format-Table -AutoSize Name,Status,StartType
+  Get-Service -Name $ServiceName | Format-Table -Auto Name,Status,StartType
 } else {
-  Write-Host "[i] Not starting now (use -StartNow to start)."
+  Write-Host "[i] Not starting now (use -StartNow)."
 }
 
-Write-Host "`n✅ Done."
+Write-Host "`n✅ Done. Log: $log"
 Read-Host "Press ENTER to close"
+Stop-Transcript | Out-Null
