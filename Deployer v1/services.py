@@ -17,7 +17,8 @@ def nssm_card():
         ])
 
     def render():
-        with ui.card().classes('neon-card w-full max-w-3xl'):
+        with ui.card().classes('w-full max-w-2xl mx-auto p-4 neon-card'):
+            ui.label('Nssm Manager').classes('neon-text text-xl font-bold mb-4')
             ui.button('Install NSSM', icon='download', on_click=install_nssm).props('color=primary outlined').classes('mb-2')
     render()
     return render
