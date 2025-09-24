@@ -10,16 +10,16 @@ def services_body():
 def nssm_card():
 
     def install_nssm():
-        bat_file = Path("Scripts/install_nssm.bat").resolve()       
+        ps_file = Path("Scripts/install_nssm.ps1").resolve()
         subprocess.run([
-            "powershell", "-Command",
-            f'Start-Process "{bat_file}" -Verb RunAs'
+            "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+            f'Start-Process powershell -ArgumentList \'-NoProfile -ExecutionPolicy Bypass -File "{ps_file}"\' -Verb RunAs'
         ])
     def uninstall_nssm():
-        bat_file = Path("Scripts/uninstall_nssm.bat").resolve()       
+        ps_file = Path("Scripts/uninstall_nssm.ps1").resolve()
         subprocess.run([
-            "powershell", "-Command",
-            f'Start-Process "{bat_file}" -Verb RunAs'
+            "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+            f'Start-Process powershell -ArgumentList \'-NoProfile -ExecutionPolicy Bypass -File "{ps_file}"\' -Verb RunAs'
         ])
 
     def render():
@@ -27,6 +27,6 @@ def nssm_card():
             ui.label('Nssm Manager').classes('neon-text text-xl font-bold mb-4')
             with ui.row():
                 ui.button('Install NSSM', icon='download', on_click=install_nssm).props('color=primary outlined ').classes('mb-2')
-                ui.button('Uninstall NSSM', icon='delete', on_click=install_nssm).props('color=red outlined ').classes('mb-2')
+                ui.button('Uninstall NSSM', icon='delete', on_click=uninstall_nssm).props('color=red outlined ').classes('mb-2')
     render()
     return render
