@@ -147,6 +147,7 @@ def session_card():
             with ui.column().classes('w-full gap-3'):
                 # 1) Pick root first
                 path_picker_input('Root folder', 'root_path')
+                ui.separator()
                 # 2) These will open at the latest root_path (and refresh after root changes)
                 path_picker_input('App folder',     'app_path')
                 path_picker_input('Code folder',     'code_path')
