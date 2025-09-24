@@ -22,10 +22,12 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="config.py" />
     <Compile Include="dependencies.py" />
     <Compile Include="Deployer_v1.py" />
     <Compile Include="filesys.py" />
     <Compile Include="layouts.py" />
+    <Compile Include="services.py" />
     <Compile Include="source.py" />
     <Compile Include="state.py" />
   </ItemGroup>
@@ -39,6 +41,15 @@
       <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
       <Architecture>X64</Architecture>
     </Interpreter>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Scripts\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Scripts\create-nssm-service.ps1" />
+    <Content Include="Scripts\install_nssm.ps1" />
+    <Content Include="Scripts\checkpath_nssm.ps1" />
+    <Content Include="Scripts\uninstall_nssm.ps1" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

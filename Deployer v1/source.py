@@ -55,10 +55,10 @@ def gitpath_card():
             ui.notify('No repo URL', color='negative'); return
         if not State.active_branch:
             ui.notify('No branch selected', color='negative'); return
-        if not State.root_path:
+        if not State.app_path:
             ui.notify('No target directory', color='negative'); return
 
-        target = Path(State.root_path)
+        target = Path(State.app_path)
         if target.exists() and any(target.iterdir()):
             ui.notify('Target folder not empty', color='warning')
             return
@@ -78,10 +78,11 @@ def gitpath_card():
     @ui.refreshable
     def render():
         with ui.card().classes('w-full mx-auto p-4'):
+            ui.label('Github').classes('neon-text text-xl font-bold mb-4')
             with ui.column().classes('w-full gap-3'):
 
                 # App Directory (readonly) — bound to State
-                ui.input('App Directory').props('dense outlined readonly').classes('w-full').bind_value(State, 'root_path')
+                ui.input('App Directory').props('dense outlined readonly').classes('w-full').bind_value(State, 'app_path')
 
                 ui.separator()
                 repo_input = ui.input('Github Repo') .props('dense outlined').classes('w-full').bind_value(State, 'repo_url')
