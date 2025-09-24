@@ -103,7 +103,7 @@ def nssm_service_card():
 
                 ui.number('Restart delay (ms)', format='%d').bind_value(State, 'nssm_restart_delay_ms').classes('w-full')
                 ui.input('Run as (ObjectName)').props('dense outlined').bind_value(State, 'nssm_object_name').classes('w-full')
-                ui.input('Password (NOT stored in TOML)').props('dense outlined type=password').bind_value(State, 'nssm_object_password').classes('w-full')
+                ui.input('Password').props('dense outlined type=password').bind_value(State, 'nssm_object_password').classes('w-full')
 
             with ui.row().classes('w-full gap-2 items-stretch mt-2'):
                 ui.button('Create / Update Service', icon='play_circle', on_click=create_service_from_state) \

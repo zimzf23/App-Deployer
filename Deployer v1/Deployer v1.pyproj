@@ -46,6 +46,7 @@
     <Folder Include="Scripts\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Scripts\create-nssm-service.ps1" />
     <Content Include="Scripts\install_nssm.ps1" />
     <Content Include="Scripts\checkpath_nssm.ps1" />
     <Content Include="Scripts\uninstall_nssm.ps1" />
