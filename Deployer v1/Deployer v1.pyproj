@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Scripts\install_nssm.ps1" />
+    <Content Include="Scripts\checkpath_nssm.ps1" />
     <Content Include="Scripts\uninstall_nssm.ps1" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
