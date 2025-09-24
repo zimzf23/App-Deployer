@@ -15,6 +15,12 @@ def nssm_card():
             "powershell", "-Command",
             f'Start-Process "{bat_file}" -Verb RunAs'
         ])
+    def uninstall_nssm():
+        bat_file = Path("Scripts/uninstall_nssm.bat").resolve()       
+        subprocess.run([
+            "powershell", "-Command",
+            f'Start-Process "{bat_file}" -Verb RunAs'
+        ])
 
     def render():
         with ui.card().classes('w-full max-w-2xl mx-auto p-4 neon-card'):
